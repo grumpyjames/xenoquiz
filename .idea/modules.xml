@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/bird_noise_quiz.iml" filepath="$PROJECT_DIR$/.idea/bird_noise_quiz.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/xenoproxy.iml" filepath="$PROJECT_DIR$/.idea/modules/xenoproxy.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/xenoproxy_main.iml" filepath="$PROJECT_DIR$/.idea/modules/xenoproxy_main.iml" group="xenoproxy" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/xenoproxy_test.iml" filepath="$PROJECT_DIR$/.idea/modules/xenoproxy_test.iml" group="xenoproxy" />
+    </modules>
+  </component>
+</project>
