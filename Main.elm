@@ -3,7 +3,7 @@ import Debug
 import Json.Decode as Decode
 import Html exposing (Html, button, div, text, audio, source)
 import Html.Attributes as Attr
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, on)
 import Http
 import List
 import Dict exposing (Dict)
@@ -56,8 +56,8 @@ britishWaders =
     , "Ringed Plover"
     , "Little Ringed Plover"
     , "Avocet"
-    , "Bar Tailed Godwit"
-    , "Black Tailed Godwit"
+    , "Bar-Tailed Godwit"
+    , "Black-Tailed Godwit"
     , "Greenshank"
     , "Common Sandpiper"
     , "Green Sandpiper"
@@ -86,6 +86,7 @@ type Msg = Start
          | RoundReady Round String
          | SelectAnswer String
          | SubmitAnswer String
+         | UseSettings Settings
          | NextQuestion
 
 subs model = Sub.none
@@ -94,7 +95,7 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Start ->
-      (model, Random.generate FetchRound (generateRound britishGardenBirds 4))
+      (model, Random.generate FetchRound (generateRound model.settings 4))
     FetchRound round ->
       (model, getBirdSound round)
     PickRecording round result ->
@@ -102,7 +103,7 @@ update msg model =
         Err e -> Debug.crash (toString e)
         Ok o ->
           if List.isEmpty o
-          then Debug.crash ("no recordings")
+          then Debug.crash ("no recordings for " ++ round.answer)
           else ({ model | gameState = GeneratingQuestion}, Random.generate (RoundReady round) (pickRandomRecording o))
     RoundReady round url ->
       ({ model | gameState = Question round Nothing url}, Cmd.none)
@@ -111,11 +112,13 @@ update msg model =
         Question round _ result -> ({ model | gameState = Question round (Just answer) result}, Cmd.none)
         _ -> Debug.crash "impossible!"
     NextQuestion ->
-      ({ model | gameState = GeneratingQuestion }, Random.generate FetchRound (generateRound britishGardenBirds 4))
+      ({ model | gameState = GeneratingQuestion }, Random.generate FetchRound (generateRound model.settings 4))
     SubmitAnswer answer ->
       case model.gameState of
         Question round _ result  -> ({ model | gameState = RoundEnd round answer }, Cmd.none)
         _ -> Debug.crash "impossible!"
+    UseSettings newSettings ->
+      ({ model | settings = newSettings}, Cmd.none)
 
 pickRandomRecording : List String -> Generator String
 pickRandomRecording candidates =
@@ -158,13 +161,35 @@ showRoundEnd r answer =
     [ div [] [if r.answer == answer then (text "Correct") else (text ("Incorrect - it was " ++ r.answer))]
     , button [onClick NextQuestion] [ text "Next Bird" ]]
 
-view : Model -> Html Msg
-view model =
-  case model.gameState of
+unsafeLookup : Dict String b -> String -> b
+unsafeLookup dict key =
+  let v = Dict.get key dict
+  in case v of
+    Just val -> val
+    Nothing -> Debug.crash ("not found: " ++ toString key)
+
+selections : Settings -> Html Msg
+selections (inUse, birds) =
+  let
+    optionEl (opt, values) = Html.option [ Attr.selected (opt == inUse) ] [text opt]
+    decoder = Decode.map UseSettings <|
+      Decode.map (\key -> (key, (unsafeLookup answerSets key))) <| Html.Events.targetValue
+    parentSelect =
+      Html.select [ on "change" decoder, Attr.id "setSelector" ] <|
+        List.map optionEl <| Dict.toList answerSets
+    labelForSelect = Html.label [Attr.for "setSelector"] [text "Using set: "]
+  in div [Attr.class "settings"] [labelForSelect, parentSelect]
+
+state gameState =
+  case gameState of
     Init -> initialView
     GeneratingQuestion -> text "Generating question"
     Question round maybeAnswer r -> showQuestion round maybeAnswer r
     RoundEnd round answer -> showRoundEnd round answer
+
+view : Model -> Html Msg
+view model =
+  div [] [selections model.settings, state model.gameState]
 
 getBirdSound : Round -> Cmd Msg
 getBirdSound round =
@@ -181,8 +206,8 @@ decodeBirdSoundUrl =
   let fileAccessor = Decode.at ["file"] Decode.string
   in Decode.at ["recordings"] <| Decode.list fileAccessor
 
-generateRound : Array String -> Int -> Generator Round
-generateRound candidates size =
+generateRound : Settings -> Int -> Generator Round
+generateRound (name, candidates) size =
   let permIndexGen = Random.int 0 ((factorial (Array.length candidates)) - 1)
       answerIndexGen = Random.int 0 (size - 1)
       pickRound index answerIndex =

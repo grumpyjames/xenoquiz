@@ -26,3 +26,7 @@ body {
 .selected {
   font-weight: bold;
 }
+
+.settings {
+  margin-bottom: 25px;
+}
