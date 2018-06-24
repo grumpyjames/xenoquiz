@@ -6,39 +6,79 @@ import Html.Attributes as Attr
 import Html.Events exposing (onClick)
 import Http
 import List
+import Dict exposing (Dict)
 import Maybe
 import Random exposing (Generator)
 import Result
 
 main =
   Html.program 
-    { init = (Init, Cmd.none)
+    { init = ((Model ("UK Garden Birds", britishGardenBirds) Init), Cmd.none)
     , update = update
     , subscriptions = subs
     , view = view
     }
 
-birds =
+answerSets : Dict String (Array String)
+answerSets =
+  Dict.fromList
+    [ ("UK Garden Birds", britishGardenBirds)
+    , ("UK Waders", britishWaders)
+    ]
+
+britishGardenBirds =
   Array.fromList
     [ "Eurasian Blue Tit"
     , "European Robin"
     , "Dunnock"
     , "Great Tit"
-    , "Eurasian Curlew"
+    , "Chaffinch"
+    , "Greenfinch"
+    , "Goldfinch"
+    , "Coal Tit"
+    , "Long-tailed Tit"
     , "Song Thrush"
+    , "Blackbird"
+    , "Goldcrest"
+    , "House Sparrow"
+    , "Common Wood Pigeon"
+    , "Eurasian Collared Dove"
+    , "Eurasian Magpie"
     ]
 
+britishWaders =
+  Array.fromList
+    [ "Eurasian Curlew"
+    , "Oystercatcher"
+    , "Redshank"
+    , "Sanderling"
+    , "Dunlin"
+    , "Ringed Plover"
+    , "Little Ringed Plover"
+    , "Avocet"
+    , "Bar Tailed Godwit"
+    , "Black Tailed Godwit"
+    , "Greenshank"
+    , "Common Sandpiper"
+    , "Green Sandpiper"
+    ]
 type alias Round =
   { answer: String
   , all: List String
   }
 
-type Model
+type alias Settings = (String, Array String)
+
+type alias Model =
+  { settings: Settings
+  , gameState: GameState
+  }
+
+type GameState
   = Init
   | GeneratingQuestion
   | Question Round (Maybe String) String
   | RoundEnd Round String
-
 
 type Msg = Start
          | FetchRound Round
@@ -50,30 +90,31 @@ type Msg = Start
 
 subs model = Sub.none
 
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Start ->
-      (GeneratingQuestion, Random.generate FetchRound (generateRound birds 4))
+      (model, Random.generate FetchRound (generateRound britishGardenBirds 4))
     FetchRound round ->
-      (GeneratingQuestion, getBirdSound round)
+      (model, getBirdSound round)
     PickRecording round result ->
       case result of
         Err e -> Debug.crash (toString e)
         Ok o ->
           if List.isEmpty o
           then Debug.crash ("no recordings")
-          else (GeneratingQuestion, Random.generate (RoundReady round) (pickRandomRecording o))
-    RoundReady round result ->
-      (Question round Nothing result, Cmd.none)
+          else ({ model | gameState = GeneratingQuestion}, Random.generate (RoundReady round) (pickRandomRecording o))
+    RoundReady round url ->
+      ({ model | gameState = Question round Nothing url}, Cmd.none)
     SelectAnswer answer ->
-      case model of
-        Question round _ result  -> (Question round (Just answer) result, Cmd.none)
+      case model.gameState of
+        Question round _ result -> ({ model | gameState = Question round (Just answer) result}, Cmd.none)
         _ -> Debug.crash "impossible!"
     NextQuestion ->
-      (GeneratingQuestion, Random.generate FetchRound (generateRound birds 4))
+      ({ model | gameState = GeneratingQuestion }, Random.generate FetchRound (generateRound britishGardenBirds 4))
     SubmitAnswer answer ->
-      case model of
-        Question round _ result  -> (RoundEnd round answer, Cmd.none)
+      case model.gameState of
+        Question round _ result  -> ({ model | gameState = RoundEnd round answer }, Cmd.none)
         _ -> Debug.crash "impossible!"
 
 pickRandomRecording : List String -> Generator String
@@ -117,8 +158,9 @@ showRoundEnd r answer =
     [ div [] [if r.answer == answer then (text "Correct") else (text ("Incorrect - it was " ++ r.answer))]
     , button [onClick NextQuestion] [ text "Next Bird" ]]
 
+view : Model -> Html Msg
 view model =
-  case model of
+  case model.gameState of
     Init -> initialView
     GeneratingQuestion -> text "Generating question"
     Question round maybeAnswer r -> showQuestion round maybeAnswer r
