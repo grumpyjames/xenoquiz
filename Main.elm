@@ -45,6 +45,7 @@ ukGardenBirds =
     , "Common Wood Pigeon"
     , "Eurasian Collared Dove"
     , "Eurasian Magpie"
+    , "Eurasian Wren"
     ]
 
 ukWaders =
