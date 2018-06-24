@@ -83,7 +83,11 @@ submitAnswerView : Maybe String -> List (Html Msg)
 submitAnswerView maybeAnswer =
   let submitButton selected =
     [button [onClick (SubmitAnswer selected)] [text "Submit Answer"]]
-  in Maybe.withDefault [] <| Maybe.map (submitButton) maybeAnswer
+  in Maybe.withDefault
+    [
+      button [Attr.disabled True] [text "Submit Answer"]
+    ]
+    <| Maybe.map (submitButton) maybeAnswer
 
 showQuestion : Round -> Maybe String -> Result Http.Error (Maybe String) -> Html Msg
 showQuestion round maybeAnswer r =
@@ -104,7 +108,7 @@ showQuestion round maybeAnswer r =
 showRoundEnd : Round -> String -> Html Msg
 showRoundEnd r answer =
   div []
-    [ if r.answer == answer then (text "Correct") else (text ("Wrong - it was " ++ r.answer))
+    [ div [] [if r.answer == answer then (text "Correct") else (text ("Incorrect - it was " ++ r.answer))]
     , button [onClick NextQuestion] [ text "Next Bird" ]]
 
 view model =
