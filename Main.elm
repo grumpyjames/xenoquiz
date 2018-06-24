@@ -36,13 +36,14 @@ type alias Round =
 type Model
   = Init
   | GeneratingQuestion
-  | Question Round (Maybe String) (Result Http.Error (Maybe String))
+  | Question Round (Maybe String) String
   | RoundEnd Round String
 
 
 type Msg = Start
          | FetchRound Round
-         | RoundReady Round (Result Http.Error (Maybe String))
+         | PickRecording Round (Result Http.Error (List String))
+         | RoundReady Round String
          | SelectAnswer String
          | SubmitAnswer String
          | NextQuestion
@@ -55,6 +56,13 @@ update msg model =
       (GeneratingQuestion, Random.generate FetchRound (generateRound birds 4))
     FetchRound round ->
       (GeneratingQuestion, getBirdSound round)
+    PickRecording round result ->
+      case result of
+        Err e -> Debug.crash (toString e)
+        Ok o ->
+          if List.isEmpty o
+          then Debug.crash ("no recordings")
+          else (GeneratingQuestion, Random.generate (RoundReady round) (pickRandomRecording o))
     RoundReady round result ->
       (Question round Nothing result, Cmd.none)
     SelectAnswer answer ->
@@ -67,6 +75,11 @@ update msg model =
       case model of
         Question round _ result  -> (RoundEnd round answer, Cmd.none)
         _ -> Debug.crash "impossible!"
+
+pickRandomRecording : List String -> Generator String
+pickRandomRecording candidates =
+   let indexGen = Random.int 0 ((List.length candidates) - 1)
+   in Random.map (\i -> unsafeGet i (Array.fromList candidates)) indexGen
 
 initialView = button [ onClick Start ] [ text "Start Quiz" ]
 
@@ -89,21 +102,14 @@ submitAnswerView maybeAnswer =
     ]
     <| Maybe.map (submitButton) maybeAnswer
 
-showQuestion : Round -> Maybe String -> Result Http.Error (Maybe String) -> Html Msg
-showQuestion round maybeAnswer r =
-  case r of
-    Ok val ->
-      case val of
-        Just url ->
-          div []
-            ([
-              audio [Attr.controls True] [source [Attr.src url] []]
-            ] ++
-              (List.map (answerView maybeAnswer) (round.all)) ++
-              (submitAnswerView maybeAnswer))
-        Nothing -> text <| "No sound found for " ++ round.answer
-    Err e ->
-      text <| "Error " ++ (toString e) ++ " found attempting to find sound for " ++ round.answer
+showQuestion : Round -> Maybe String -> String -> Html Msg
+showQuestion round maybeAnswer url =
+  div []
+    ([
+      audio [Attr.controls True] [source [Attr.src url] []]
+    ] ++
+      (List.map (answerView maybeAnswer) (round.all)) ++
+      (submitAnswerView maybeAnswer))
 
 showRoundEnd : Round -> String -> Html Msg
 showRoundEnd r answer =
@@ -126,12 +132,12 @@ getBirdSound round =
     request =
       Http.get url decodeBirdSoundUrl
   in
-    Http.send (RoundReady round) request
+    Http.send (PickRecording round) request
 
-decodeBirdSoundUrl : Decode.Decoder (Maybe String)
+decodeBirdSoundUrl : Decode.Decoder (List String)
 decodeBirdSoundUrl =
   let fileAccessor = Decode.at ["file"] Decode.string
-  in Decode.map List.head <| Decode.at ["recordings"] <| Decode.list fileAccessor
+  in Decode.at ["recordings"] <| Decode.list fileAccessor
 
 generateRound : Array String -> Int -> Generator Round
 generateRound candidates size =
