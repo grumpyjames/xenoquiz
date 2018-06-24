@@ -13,7 +13,7 @@ import Result
 
 main =
   Html.program 
-    { init = ((Model ("UK Garden Birds", britishGardenBirds) Init), Cmd.none)
+    { init = ((Model ("UK Garden Birds", ukGardenBirds) Init), Cmd.none)
     , update = update
     , subscriptions = subs
     , view = view
@@ -22,11 +22,12 @@ main =
 answerSets : Dict String (Array String)
 answerSets =
   Dict.fromList
-    [ ("UK Garden Birds", britishGardenBirds)
-    , ("UK Waders", britishWaders)
+    [ ("UK Garden Birds", ukGardenBirds)
+    , ("UK Waders", ukWaders)
+    , ("UK Woodland Birds", ukWoodlandBirds)
     ]
 
-britishGardenBirds =
+ukGardenBirds =
   Array.fromList
     [ "Eurasian Blue Tit"
     , "European Robin"
@@ -46,7 +47,7 @@ britishGardenBirds =
     , "Eurasian Magpie"
     ]
 
-britishWaders =
+ukWaders =
   Array.fromList
     [ "Eurasian Curlew"
     , "Oystercatcher"
@@ -62,6 +63,18 @@ britishWaders =
     , "Common Sandpiper"
     , "Green Sandpiper"
     ]
+
+ukWoodlandBirds =
+  Array.fromList
+    [ "Great Spotted Woodpecker"
+    , "Lesser Spotted Woodpecker"
+    , "European Green Woodpecker"
+    , "Eurasian Nuthatch"
+    , "Eurasian Treecreeper"
+    , "Goldcrest"
+    , "Common Firecrest"
+    ]
+
 type alias Round =
   { answer: String
   , all: List String
@@ -189,7 +202,7 @@ state gameState =
 
 view : Model -> Html Msg
 view model =
-  div [] [selections model.settings, state model.gameState]
+  div [] [selections model.settings, div [Attr.class "gamestate"] [state model.gameState]]
 
 getBirdSound : Round -> Cmd Msg
 getBirdSound round =

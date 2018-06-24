@@ -30,3 +30,7 @@ body {
 .settings {
   margin-bottom: 25px;
 }
+
+.gamestate {
+  min-height: 200px;
+}
