@@ -28,7 +28,6 @@ public class XenoCantoProxy extends HttpServlet {
 
     if (cache.get(birdNameRaw) == null)
     {
-      System.out.println("Cache miss for " + birdNameRaw);
       final String xenoApiUrl = "https://www.xeno-canto.org/api/2/recordings?query=" + encodedName;
       final URL url = new URL(xenoApiUrl);
       final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
