@@ -1,6 +1,7 @@
 import Array exposing (Array)
 import Debug
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Html exposing (Html, button, div, text, audio, source)
 import Html.Attributes as Attr
 import Html.Events exposing (onClick, on)
@@ -11,9 +12,11 @@ import Maybe
 import Random exposing (Generator)
 import Result
 
+initialSet = ("UK Garden Birds", ukGardenBirds)
+
 main =
   Html.program 
-    { init = ((Model ("UK Garden Birds", ukGardenBirds) Init), Cmd.none)
+    { init = ((Model initialSet Init), warmupBirds initialSet)
     , update = update
     , subscriptions = subs
     , view = view
@@ -101,6 +104,7 @@ type Msg = Start
          | SelectAnswer String
          | SubmitAnswer String
          | UseSettings Settings
+         | WarmupComplete
          | NextQuestion
 
 subs model = Sub.none
@@ -132,7 +136,9 @@ update msg model =
         Question round _ url  -> ({ model | gameState = RoundEnd round answer url }, Cmd.none)
         _ -> Debug.crash "impossible!"
     UseSettings newSettings ->
-      ({ model | settings = newSettings}, Cmd.none)
+      ({ model | settings = newSettings}, warmupBirds newSettings)
+    WarmupComplete ->
+      ( model, Cmd.none )
 
 pickRandomRecording : List String -> Generator String
 pickRandomRecording candidates =
@@ -211,6 +217,17 @@ view model =
     [Attr.class "child"]
     [selections model.settings
     , div [Attr.class "gamestate"] [state model.gameState]]
+
+warmupBirds : Settings -> Cmd Msg
+warmupBirds (name, birds) =
+  let
+    url = "/api/birds"
+    vals = List.map Encode.string <| Array.toList birds
+    encoded = Encode.object [("birds", Encode.list vals)]
+    request =
+      Http.post url (Http.jsonBody encoded) (Decode.succeed "ooh")
+  in
+    Http.send (\r -> WarmupComplete) request
 
 getBirdSound : Round -> Cmd Msg
 getBirdSound round =

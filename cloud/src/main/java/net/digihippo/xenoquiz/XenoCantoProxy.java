@@ -35,52 +35,77 @@ public class XenoCantoProxy extends HttpServlet {
     private String file;
   }
 
+  public static final class WarmupRequest
+  {
+    private List<String> birds;
+  }
+
+  @Override
+  public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException
+  {
+    WarmupRequest warmupRequest =
+        gson.fromJson(new InputStreamReader(request.getInputStream()), WarmupRequest.class);
+
+    for (String birdName : warmupRequest.birds)
+    {
+      if (cache.get(birdName) == null)
+      {
+        populateCache(response, birdName);
+      }
+    }
+
+    response.setStatus(204);
+  }
+
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws IOException
   {
-
     final String birdNameRaw = request.getParameter("birdName");
-    final String encodedName = URLEncoder.encode(
-        birdNameRaw, StandardCharsets.UTF_8.name());
-
     if (cache.get(birdNameRaw) == null)
     {
-      final String xenoApiUrl = "https://www.xeno-canto.org/api/2/recordings?query=" + encodedName;
-      final URL url = new URL(xenoApiUrl);
-      final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-      if (connection.getResponseCode() < 300)
-      {
-        try (final InputStream inputStream = connection.getInputStream())
-        {
-          final Recordings recordings =
-              gson.fromJson(new JsonReader(new InputStreamReader(inputStream)), Recordings.class);
-
-
-          final List<Recording> trimmer = recordings.recordings
-              .stream()
-              .map(r -> r.file.replace("//www.xeno-canto.org/", ""))
-              .map(u -> {
-                Recording r = new Recording();
-                r.file = u;
-                return r;
-              })
-              .collect(Collectors.toList());
-
-          Recordings trimmed = new Recordings();
-          trimmed.recordings = trimmer;
-          cache.put(birdNameRaw, gson.toJson(trimmed));
-        }
-      }
-      else
-      {
-        response.setStatus(connection.getResponseCode());
-      }
+      populateCache(response, birdNameRaw);
     }
 
     response.setStatus(200);
     response.setHeader("Content-Type", "application/json");
     response.getOutputStream().print(cache.get(birdNameRaw));
+  }
+
+  private void populateCache(HttpServletResponse response, String birdNameRaw) throws IOException
+  {
+    final String encodedName = URLEncoder.encode(
+        birdNameRaw, StandardCharsets.UTF_8.name());
+    final String xenoApiUrl = "https://www.xeno-canto.org/api/2/recordings?query=" + encodedName;
+    final URL url = new URL(xenoApiUrl);
+    final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+    if (connection.getResponseCode() < 300)
+    {
+      try (final InputStream inputStream = connection.getInputStream())
+      {
+        final Recordings recordings =
+            gson.fromJson(new JsonReader(new InputStreamReader(inputStream)), Recordings.class);
+
+
+        final List<Recording> trimmer = recordings.recordings
+            .stream()
+            .map(r -> r.file.replace("//www.xeno-canto.org/", ""))
+            .map(u -> {
+              Recording r = new Recording();
+              r.file = u;
+              return r;
+            })
+            .collect(Collectors.toList());
+
+        Recordings trimmed = new Recordings();
+        trimmed.recordings = trimmer;
+        cache.put(birdNameRaw, gson.toJson(trimmed));
+      }
+    }
+    else
+    {
+      response.setStatus(connection.getResponseCode());
+    }
   }
 }
