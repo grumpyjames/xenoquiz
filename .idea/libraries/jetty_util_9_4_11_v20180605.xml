@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="jetty-util-9.4.11.v20180605">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/xenoproxy/lib/jetty-util-9.4.11.v20180605.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

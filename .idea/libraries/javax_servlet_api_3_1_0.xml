@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="javax.servlet-api-3.1.0">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/xenoproxy/lib/javax.servlet-api-3.1.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/xenoproxy/lib/jetty-http-9.4.11.v20180605.jar!/" />
+      <root url="jar://$PROJECT_DIR$/xenoproxy/lib/jetty-io-9.4.11.v20180605.jar!/" />
+      <root url="jar://$PROJECT_DIR$/xenoproxy/lib/jetty-server-9.4.11.v20180605.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

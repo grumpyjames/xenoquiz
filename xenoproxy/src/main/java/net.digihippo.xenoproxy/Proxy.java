@@ -4,23 +4,49 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
+import javax.net.ssl.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.stream.IntStream;
 
 class Proxy
 {
     public static void main(String[] args) throws Exception {
+        // Create a trust manager that does not validate certificate chains
+        TrustManager[] trustAllCerts = new TrustManager[] {new X509TrustManager() {
+            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                return null;
+            }
+            public void checkClientTrusted(X509Certificate[] certs, String authType) {
+            }
+            public void checkServerTrusted(X509Certificate[] certs, String authType) {
+            }
+        }
+        };
 
-        System.out.println(Arrays.toString(permutation(2, new int[]{4, 5, 6, 7}, new int[0])));
+        // Install the all-trusting trust manager
+        SSLContext sc = SSLContext.getInstance("SSL");
+        sc.init(null, trustAllCerts, new java.security.SecureRandom());
+        HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+
+        // Create all-trusting host name verifier
+        HostnameVerifier allHostsValid = new HostnameVerifier() {
+            public boolean verify(String hostname, SSLSession session) {
+                return true;
+            }
+        };
+
+        // Install the all-trusting host verifier
+        HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
 
         Server server = new Server(8080);
         server.setHandler(new AbstractHandler() {
@@ -30,12 +56,9 @@ class Proxy
                     Request baseRequest,
                     HttpServletRequest request,
                     HttpServletResponse response) throws IOException {
-                // Should already be url encoded, so just pass it through.
                 final String birdName = URLEncoder.encode(
                         baseRequest.getParameter("birdName"), StandardCharsets.UTF_8.name());
                 final String xenoApiUrl = "https://www.xeno-canto.org/api/2/recordings?query=" + birdName;
-
-                System.out.println(xenoApiUrl);
 
                 final URL url = new URL(xenoApiUrl);
                 final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -72,32 +95,5 @@ class Proxy
 
         server.start();
         server.join();
-    }
-
-    private static int factorial(final int num) {
-        return IntStream.rangeClosed(2, num).reduce(1, (x, y) -> x * y);
-    }
-
-    private static int[] permutation(final int count, final int[] input, final int[] output) {
-        if (input.length == 0) { return output; }
-
-        final int factorial = factorial(input.length - 1);
-
-        final int[] newOutput = new int[output.length + 1];
-        System.arraycopy(output, 0, newOutput, 0, output.length);
-        int itemIndex = count / factorial;
-        newOutput[output.length] = input[itemIndex];
-
-        final int[] newInput = new int[input.length - 1];
-        if (itemIndex > 0)
-        {
-            System.arraycopy(input, 0, newInput, 0, itemIndex);
-        }
-        if (itemIndex != input.length - 1)
-        {
-            System.arraycopy(input, itemIndex + 1, newInput, itemIndex, input.length - 1 - itemIndex);
-        }
-
-        return permutation(count % factorial, newInput, newOutput);
     }
 }

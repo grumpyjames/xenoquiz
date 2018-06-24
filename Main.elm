@@ -33,14 +33,18 @@ type alias Round =
   , all: List String
   }
 
-type Model =
-  Init |
-  GeneratingQuestion |
-  Question Round (Result Http.Error (Maybe String))
+type Model
+  = Init
+  | GeneratingQuestion
+  | Question Round (Maybe String) (Result Http.Error (Maybe String))
+  | RoundEnd Round String
+
 
 type Msg = Start
          | FetchRound Round
          | RoundReady Round (Result Http.Error (Maybe String))
+         | SelectAnswer String
+         | SubmitAnswer String
          | NextQuestion
 
 subs model = Sub.none
@@ -52,31 +56,63 @@ update msg model =
     FetchRound round ->
       (GeneratingQuestion, getBirdSound round)
     RoundReady round result ->
-      (Question round result, Cmd.none)
+      (Question round Nothing result, Cmd.none)
+    SelectAnswer answer ->
+      case model of
+        Question round _ result  -> (Question round (Just answer) result, Cmd.none)
+        _ -> Debug.crash "impossible!"
     NextQuestion ->
       (GeneratingQuestion, Random.generate FetchRound (generateRound birds 4))
+    SubmitAnswer answer ->
+      case model of
+        Question round _ result  -> (RoundEnd round answer, Cmd.none)
+        _ -> Debug.crash "impossible!"
 
 initialView = button [ onClick Start ] [ text "Start Quiz" ]
 
-showQuestion : Round -> Result Http.Error (Maybe String) -> Html Msg
-showQuestion round r =
+answerView : Maybe String -> String -> Html Msg
+answerView maybeAnswer name  =
+  let selectedAnswer = Maybe.withDefault False <| Maybe.map (\t -> t == name) maybeAnswer
+  in div
+    [ Attr.class "answer"
+    , Attr.class (if selectedAnswer then "selected" else "not-selected")
+    , onClick (SelectAnswer name) ]
+    [text name]
+
+submitAnswerView : Maybe String -> List (Html Msg)
+submitAnswerView maybeAnswer =
+  let submitButton selected =
+    [button [onClick (SubmitAnswer selected)] [text "Submit Answer"]]
+  in Maybe.withDefault [] <| Maybe.map (submitButton) maybeAnswer
+
+showQuestion : Round -> Maybe String -> Result Http.Error (Maybe String) -> Html Msg
+showQuestion round maybeAnswer r =
   case r of
     Ok val ->
       case val of
         Just url ->
           div []
-            ([ audio [Attr.controls True] [source [Attr.src url] []]
-            , button [onClick NextQuestion] [ text "Next Bird" ]
-            ] ++ List.map text (round.all))
+            ([
+              audio [Attr.controls True] [source [Attr.src url] []]
+            ] ++
+              (List.map (answerView maybeAnswer) (round.all)) ++
+              (submitAnswerView maybeAnswer))
         Nothing -> text <| "No sound found for " ++ round.answer
     Err e ->
       text <| "Error " ++ (toString e) ++ " found attempting to find sound for " ++ round.answer
+
+showRoundEnd : Round -> String -> Html Msg
+showRoundEnd r answer =
+  div []
+    [ if r.answer == answer then (text "Correct") else (text ("Wrong - it was " ++ r.answer))
+    , button [onClick NextQuestion] [ text "Next Bird" ]]
 
 view model =
   case model of
     Init -> initialView
     GeneratingQuestion -> text "Generating question"
-    Question round r -> showQuestion round r
+    Question round maybeAnswer r -> showQuestion round maybeAnswer r
+    RoundEnd round answer -> showRoundEnd round answer
 
 getBirdSound : Round -> Cmd Msg
 getBirdSound round =
