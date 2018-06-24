@@ -1,3 +1,5 @@
+set -euo pipefail
+
 WEB_OUT=cloud/src/main/webapp
 
 elm-make Main.elm --output $WEB_OUT/my.js

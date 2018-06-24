@@ -1,26 +1,44 @@
 package net.digihippo.xenoquiz;
 
+import com.google.gson.Gson;
+import com.google.gson.stream.JsonReader;
+
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @WebServlet(name = "XenoCantoProxy", value = "/api/birds")
 public class XenoCantoProxy extends HttpServlet {
 
+  private static final Gson gson = new Gson();
   private static final Map<String, String> cache = new ConcurrentHashMap<>();
+
+  public static final class Recordings
+  {
+    private List<Recording> recordings;
+  }
+
+  public static final class Recording
+  {
+    private String file;
+  }
 
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
-      throws IOException {
+      throws IOException
+  {
 
     final String birdNameRaw = request.getParameter("birdName");
     final String encodedName = URLEncoder.encode(
@@ -34,19 +52,25 @@ public class XenoCantoProxy extends HttpServlet {
 
       if (connection.getResponseCode() < 300)
       {
-        final StringBuilder builder = new StringBuilder();
-        final byte[] buffer = new byte[1024];
         try (final InputStream inputStream = connection.getInputStream())
         {
-          int readCount = inputStream.read(buffer);
-          while (readCount != -1)
-          {
-            builder.append(new String(buffer, 0, readCount, StandardCharsets.UTF_8));
+          final Recordings recordings =
+              gson.fromJson(new JsonReader(new InputStreamReader(inputStream)), Recordings.class);
 
-            readCount = inputStream.read(buffer);
-          }
 
-          cache.put(birdNameRaw, builder.toString());
+          final List<Recording> trimmer = recordings.recordings
+              .stream()
+              .map(r -> r.file.replace("//www.xeno-canto.org/", ""))
+              .map(u -> {
+                Recording r = new Recording();
+                r.file = u;
+                return r;
+              })
+              .collect(Collectors.toList());
+
+          Recordings trimmed = new Recordings();
+          trimmed.recordings = trimmer;
+          cache.put(birdNameRaw, gson.toJson(trimmed));
         }
       }
       else
@@ -58,6 +82,5 @@ public class XenoCantoProxy extends HttpServlet {
     response.setStatus(200);
     response.setHeader("Content-Type", "application/json");
     response.getOutputStream().print(cache.get(birdNameRaw));
-    response.getOutputStream().close();
   }
 }

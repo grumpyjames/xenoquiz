@@ -36,3 +36,11 @@ body {
 .gamestate {
   min-height: 200px;
 }
+
+.mainPanel {
+  min-height: 200px;
+}
+
+.buttonPanel {
+  min-height: 100px;
+}

@@ -92,7 +92,7 @@ type GameState
   = Init
   | GeneratingQuestion
   | Question Round (Maybe String) String
-  | RoundEnd Round String
+  | RoundEnd Round String String
 
 type Msg = Start
          | FetchRound Round
@@ -129,7 +129,7 @@ update msg model =
       ({ model | gameState = GeneratingQuestion }, Random.generate FetchRound (generateRound model.settings 4))
     SubmitAnswer answer ->
       case model.gameState of
-        Question round _ result  -> ({ model | gameState = RoundEnd round answer }, Cmd.none)
+        Question round _ url  -> ({ model | gameState = RoundEnd round answer url }, Cmd.none)
         _ -> Debug.crash "impossible!"
     UseSettings newSettings ->
       ({ model | settings = newSettings}, Cmd.none)
@@ -160,20 +160,24 @@ submitAnswerView maybeAnswer =
     ]
     <| Maybe.map (submitButton) maybeAnswer
 
+birdSound url =
+  audio [Attr.controls True] [source [Attr.src ("https://www.xeno-canto.org/" ++ url)] []]
+
+ui : List (Html Msg) -> List (Html Msg) -> Html Msg
+ui mainPanelContent buttonPanelContent =
+  div [] [div [Attr.class "mainPanel"] mainPanelContent, div [Attr.class "buttonPanel"] buttonPanelContent]
+
 showQuestion : Round -> Maybe String -> String -> Html Msg
 showQuestion round maybeAnswer url =
-  div []
-    ([
-      audio [Attr.controls True] [source [Attr.src url] []]
-    ] ++
-      (List.map (answerView maybeAnswer) (round.all)) ++
-      (submitAnswerView maybeAnswer))
+  let
+    mainPanel = birdSound url :: (List.map (answerView maybeAnswer) (round.all))
+    buttonPanel = submitAnswerView maybeAnswer
+  in ui mainPanel buttonPanel
 
-showRoundEnd : Round -> String -> Html Msg
-showRoundEnd r answer =
-  div []
-    [ div [] [if r.answer == answer then (text "Correct") else (text ("Incorrect - it was " ++ r.answer))]
-    , button [onClick NextQuestion] [ text "Next Bird" ]]
+showRoundEnd : Round -> String -> String -> Html Msg
+showRoundEnd r answer url =
+  let reveal = if r.answer == answer then (text "Correct") else (text ("Incorrect - it was " ++ r.answer))
+  in ui [birdSound url, reveal] [button [onClick NextQuestion] [ text "Next Bird" ]]
 
 unsafeLookup : Dict String b -> String -> b
 unsafeLookup dict key =
@@ -196,14 +200,17 @@ selections (inUse, birds) =
 
 state gameState =
   case gameState of
-    Init -> initialView
-    GeneratingQuestion -> text "Generating question"
+    Init -> ui [] [initialView]
+    GeneratingQuestion -> ui [text "Generating question"] []
     Question round maybeAnswer r -> showQuestion round maybeAnswer r
-    RoundEnd round answer -> showRoundEnd round answer
+    RoundEnd round answer r -> showRoundEnd round answer r
 
 view : Model -> Html Msg
 view model =
-  div [Attr.class "child"] [selections model.settings, div [Attr.class "gamestate"] [state model.gameState]]
+  div
+    [Attr.class "child"]
+    [selections model.settings
+    , div [Attr.class "gamestate"] [state model.gameState]]
 
 getBirdSound : Round -> Cmd Msg
 getBirdSound round =
