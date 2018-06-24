@@ -182,8 +182,11 @@ showQuestion round maybeAnswer url =
 
 showRoundEnd : Round -> String -> String -> Html Msg
 showRoundEnd r answer url =
-  let reveal = if r.answer == answer then (text "Correct") else (text ("Incorrect - it was " ++ r.answer))
-  in ui [birdSound url, reveal] [button [onClick NextQuestion] [ text "Next Bird" ]]
+  let reveal =
+    if r.answer == answer
+    then (text "Correct")
+    else (text ("Incorrect - it was " ++ r.answer))
+  in ui [birdSound url, div [] [reveal]] [button [onClick NextQuestion] [ text "Next Bird" ]]
 
 unsafeLookup : Dict String b -> String -> b
 unsafeLookup dict key =
