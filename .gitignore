@@ -1,0 +1,6 @@
+out/*
+cloud/target/*
+cloud/src/main/webapp/index.html
+cloud/src/main/webapp/styles.css
+cloud/src/main/webapp/my.js
+my.js

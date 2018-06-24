@@ -9,13 +9,15 @@ body {
   height: 100%
 }
 
-#child {
+.child {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   max-width: 800px;
   text-align: center;
+  min-width: 30%;
+  min-height: 30%;
 }
 
 .answer {

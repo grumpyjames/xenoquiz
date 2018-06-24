@@ -202,13 +202,13 @@ state gameState =
 
 view : Model -> Html Msg
 view model =
-  div [] [selections model.settings, div [Attr.class "gamestate"] [state model.gameState]]
+  div [Attr.class "child"] [selections model.settings, div [Attr.class "gamestate"] [state model.gameState]]
 
 getBirdSound : Round -> Cmd Msg
 getBirdSound round =
   let
     url =
-      "http://localhost:8080/birds?birdName=" ++ (Http.encodeUri round.answer)
+      "/api/birds?birdName=" ++ (Http.encodeUri round.answer)
     request =
       Http.get url decodeBirdSoundUrl
   in
