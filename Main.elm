@@ -16,7 +16,7 @@ initialSet = ("UK Garden Birds", ukGardenBirds)
 
 main =
   Html.program 
-    { init = ((Model initialSet Init), warmupBirds initialSet)
+    { init = ((Model initialSet (Init False)), warmup)
     , update = update
     , subscriptions = subs
     , view = view
@@ -92,7 +92,7 @@ type alias Model =
   }
 
 type GameState
-  = Init
+  = Init Bool
   | GeneratingQuestion
   | Question Round (Maybe String) String
   | RoundEnd Round String String
@@ -113,7 +113,7 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Start ->
-      (model, Random.generate FetchRound (generateRound model.settings 4))
+      ({ model | gameState = GeneratingQuestion }, Random.generate FetchRound (generateRound model.settings 4))
     FetchRound round ->
       (model, getBirdSound round)
     PickRecording round result ->
@@ -136,16 +136,18 @@ update msg model =
         Question round _ url  -> ({ model | gameState = RoundEnd round answer url }, Cmd.none)
         _ -> Debug.crash "impossible!"
     UseSettings newSettings ->
-      ({ model | settings = newSettings}, warmupBirds newSettings)
+      ({ model | settings = newSettings}, Cmd.none)
     WarmupComplete ->
-      ( model, Cmd.none )
+      ({ model | gameState = Init True }, Cmd.none )
 
 pickRandomRecording : List String -> Generator String
 pickRandomRecording candidates =
    let indexGen = Random.int 0 ((List.length candidates) - 1)
    in Random.map (\i -> unsafeGet i (Array.fromList candidates)) indexGen
 
-initialView = button [ onClick Start ] [ text "Start Quiz" ]
+initialView ready =
+  let attrs = if ready then [ onClick Start ] else [ Attr.disabled (not ready) ]
+  in button attrs [ text (if ready then "Start Quiz" else "Please wait...") ]
 
 answerView : Maybe String -> String -> Html Msg
 answerView maybeAnswer name  =
@@ -209,8 +211,20 @@ selections (inUse, birds) =
 
 state gameState =
   case gameState of
-    Init -> ui [] [initialView]
-    GeneratingQuestion -> ui [text "Generating question"] []
+    Init ready ->
+      ui
+        [Html.h2 [] [text "XenoQuiz"]
+        , text "A bird song quiz powered by "
+        , Html.a [Attr.href "https://www.xeno-canto.org"] [text "xeno-canto"]
+        ]
+        [initialView ready]
+    GeneratingQuestion ->
+      ui
+        [ Html.img [Attr.src "ajax-loader.gif"] []
+        , Html.br [] []
+        , Html.br [] []
+        , text "Generating question"]
+        []
     Question round maybeAnswer r -> showQuestion round maybeAnswer r
     RoundEnd round answer r -> showRoundEnd round answer r
 
@@ -221,14 +235,12 @@ view model =
     [selections model.settings
     , div [Attr.class "gamestate"] [state model.gameState]]
 
-warmupBirds : Settings -> Cmd Msg
-warmupBirds (name, birds) =
+warmup : Cmd Msg
+warmup =
   let
-    url = "/api/birds"
-    vals = List.map Encode.string <| Array.toList birds
-    encoded = Encode.object [("birds", Encode.list vals)]
+    url = "/api/birds?birdName=House Sparrow"
     request =
-      Http.post url (Http.jsonBody encoded) (Decode.succeed "ooh")
+      Http.get url (Decode.succeed "ooh")
   in
     Http.send (\r -> WarmupComplete) request
 

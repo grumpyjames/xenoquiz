@@ -35,28 +35,6 @@ public class XenoCantoProxy extends HttpServlet {
     private String file;
   }
 
-  public static final class WarmupRequest
-  {
-    private List<String> birds;
-  }
-
-  @Override
-  public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException
-  {
-    WarmupRequest warmupRequest =
-        gson.fromJson(new InputStreamReader(request.getInputStream()), WarmupRequest.class);
-
-    for (String birdName : warmupRequest.birds)
-    {
-      if (cache.get(birdName) == null)
-      {
-        populateCache(response, birdName);
-      }
-    }
-
-    response.setStatus(204);
-  }
-
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws IOException
