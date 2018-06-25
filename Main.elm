@@ -25,9 +25,10 @@ main =
 answerSets : Dict String (Array String)
 answerSets =
   Dict.fromList
-    [ ("UK Garden Birds", ukGardenBirds)
+    [ ("UK Garden", ukGardenBirds)
     , ("UK Waders", ukWaders)
-    , ("UK Woodland Birds", ukWoodlandBirds)
+    , ("UK Woodland", ukWoodlandBirds)
+    , ("UK Reedbed", ukReedbedBirds)
     ]
 
 ukGardenBirds =
@@ -77,6 +78,21 @@ ukWoodlandBirds =
     , "Eurasian Treecreeper"
     , "Goldcrest"
     , "Common Firecrest"
+    ]
+
+ukReedbedBirds =
+  Array.fromList
+    [ "Bearded Reedling"
+    , "Reed Warbler"
+    , "Common Whitethroat"
+    , "Lesser Whitethroat"
+    , "Grasshopper Warbler"
+    , "Sedge Warbler"
+    , "Savi's Warbler"
+    , "Common Reed Bunting"
+    , "Eurasian Wren"
+    , "Cetti's Warbler"
+    , "Eurasian Blackcap"
     ]
 
 type alias Round =
@@ -186,9 +202,9 @@ showRoundEnd : Round -> String -> String -> Html Msg
 showRoundEnd r answer url =
   let reveal =
     if r.answer == answer
-    then (text "Correct")
-    else (text ("Incorrect - it was " ++ r.answer))
-  in ui [birdSound url, div [] [reveal]] [button [onClick NextQuestion] [ text "Next Bird" ]]
+    then [Html.p [Attr.class "correct"] [text "Correct"]]
+    else [Html.p [Attr.class "wrong"] [text ("Incorrect - it was " ++ r.answer)]]
+  in ui [birdSound url, div [] reveal] [button [onClick NextQuestion] [ text "Next Bird" ]]
 
 unsafeLookup : Dict String b -> String -> b
 unsafeLookup dict key =
