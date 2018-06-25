@@ -1,3 +1,5 @@
+@charset "utf-8";
+
 body {
   margin: 0px auto;
   font-family: Georgia, serif;
@@ -28,7 +30,7 @@ body {
 .answer {
   min-width: 150px;
   text-align: center;
-  padding-top: 12px;
+  padding-top: 10px;
 }
 
 .selected {
@@ -41,12 +43,21 @@ body {
 
 .gamestate {
   min-height: 200px;
+  max-height: 250px;
 }
 
 .mainPanel {
-  min-height: 200px;
+  height: 200px;
 }
 
 .buttonPanel {
   min-height: 50px;
+}
+
+.correct::before {
+  content: "✔ "
+}
+
+.wrong::before {
+  content: "✘ "
 }
