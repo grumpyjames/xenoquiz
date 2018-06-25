@@ -83,10 +83,10 @@ ukWoodlandBirds =
 ukReedbedBirds =
   Array.fromList
     [ "Bearded Reedling"
-    , "Reed Warbler"
+    , "Eurasian Reed Warbler"
     , "Common Whitethroat"
     , "Lesser Whitethroat"
-    , "Grasshopper Warbler"
+    , "Common Grasshopper Warbler"
     , "Sedge Warbler"
     , "Savi's Warbler"
     , "Common Reed Bunting"
