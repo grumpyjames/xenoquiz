@@ -2,7 +2,7 @@ set -euo pipefail
 
 WEB_OUT=cloud/src/main/webapp
 
-elm-make Main.elm --output $WEB_OUT/my.js
+elm make Main.elm --output $WEB_OUT/my.js
 
 cp index.html $WEB_OUT/
 cp styles.css $WEB_OUT/
